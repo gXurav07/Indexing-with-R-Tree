@@ -1,5 +1,5 @@
 import random 
-dimension = 128
+dimension = 1000
 count = 1000
 
 points = []
