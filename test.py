@@ -14,3 +14,11 @@ query_point = [3.4]*dim
 nearest = list(idx.nearest(tuple(query_point), 1))
 print(nearest)
 
+query_point = [-3]*dim
+nearest = list(idx.nearest(tuple(query_point), 1))
+print(nearest)
+
+
+query_point = [i for i in range(dim)]
+nearest = list(idx.nearest(tuple(query_point), 1))
+print(nearest)
