@@ -11,7 +11,7 @@ from Model.rtree import index
 from image_viewer import ImageViewer
 
 
-
+from Model.featureExtractor import FeatureExtractor
 
 
 # Constants
@@ -36,26 +36,38 @@ idx = index.Index(properties=p)
 for i in tqdm(range(insert_count)):
     idx.insert(i, tuple(points[i][0]))
     
+match_count = 4
+def get_matched_images(query_vector):
+    nearest = list(idx.nearest(tuple(query_vector), match_count))
+    matched_imgs = []
+    for i in range(match_count):
+        matched_imgs.append(IMAGES_DIR+img_files.iloc[nearest[i]]['filename'])
+    return matched_imgs
+    
+# initialise the feature extractor
+obj = FeatureExtractor()
+
+
+    
 # # Find the M nearest point to a given point
 M = 4
 while True:
-    query_indx = int(input('Enter a File path: '))
-    if query_indx==-1: 
+    file_path = input('Enter an image File path: ')
+    if file_path=='exit': 
         print("Bye!")
         break
-    query_point = points[query_indx][0]
-    nearest = list(idx.nearest(tuple(query_point), M))
-  
     
-    query_img = IMAGES_DIR+img_files.iloc[query_indx]['filename']
-    print("Query image: ", query_img)
-    matched_imgs = []
+    img = Image.open(file_path)
+    img_features = obj.extract_features(np.array(img))
     
-    for i in range(M):
-        matched_imgs.append(IMAGES_DIR+img_files.iloc[nearest[i]]['filename'])
-        print("Matched image: ", matched_imgs[i])
     
-    ImageViewer(query_img, matched_imgs)
+    print("Query image: ", file_path)
+    matched_imgs = get_matched_images(img_features)
+    
+    print("Matched images: ", matched_imgs)
+    
+
+    ImageViewer(file_path, matched_imgs)
         
         
     print("\n")

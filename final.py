@@ -22,7 +22,7 @@ IMAGES_DIR = 'Data/Images/'
 #load the data
 points = np.load('Data/features.npy')
 img_files = pd.read_csv('Data/mapping.csv')
-insert_count = 2000
+insert_count = 100
 dim = points.shape[2]   ##
 print(f'Dimension: {dim}')
 
@@ -95,7 +95,7 @@ class ImageSelector:
         # Create a button to select an image
         self.select_button = tk.Button(self.master, text="Select Image", command=self.select_image)
         self.select_button.pack(pady=10)
-        
+
     
     def select_image(self):
         # Open a file dialog to select an image
