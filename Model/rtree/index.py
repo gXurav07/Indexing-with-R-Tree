@@ -81,124 +81,10 @@ def _get_data(handle):
 
 
 class Index:
-    """An R-Tree, MVR-Tree, or TPR-Tree indexing object"""
+    """An R-Tree indexing object"""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Creates a new index
 
-        :param filename:
-            The first argument in the constructor is assumed to be a filename
-            determining that a file-based storage for the index should be used.
-            If the first argument is not of type basestring, it is then assumed
-            to be an instance of ICustomStorage or derived class.
-            If the first argument is neither of type basestring nor an instance
-            of ICustomStorage, it is then assumed to be an input index item
-            stream.
-
-        :param stream:
-            If the first argument in the constructor is not of type basestring,
-            it is assumed to be an iterable stream of data that will raise a
-            StopIteration.  It must be in the form defined by the
-            :attr:`interleaved` attribute of the index. The following example
-            would assume :attr:`interleaved` is False::
-
-                (id,
-                 (minx, maxx, miny, maxy, minz, maxz, ..., ..., mink, maxk),
-                 object)
-
-            The object can be None, but you must put a place holder of
-            ``None`` there.
-
-            For a TPR-Tree, this would be in the form::
-
-                (id,
-                 ((minx, maxx, miny, maxy, ..., ..., mink, maxk),
-                  (minvx, maxvx, minvy, maxvy, ..., ..., minvk, maxvk),
-                  time),
-                 object)
-
-        :param storage:
-            If the first argument in the constructor is an instance of
-            ICustomStorage then the given custom storage is used.
-
-        :param interleaved: True or False, defaults to True.
-            This parameter determines the coordinate order for all methods that
-            take in coordinates.
-
-        :param properties: An :class:`index.Property` object.
-            This object sets both the creation and instantiation properties
-            for the object and they are passed down into libspatialindex.
-            A few properties are curried from instantiation parameters
-            for you like ``pagesize`` and ``overwrite``
-            to ensure compatibility with previous versions of the library.  All
-            other properties must be set on the object.
-
-        .. warning::
-            The coordinate ordering for all functions are sensitive the
-            index's :attr:`interleaved` data member.  If :attr:`interleaved`
-            is False, the coordinates must be in the form
-            [xmin, xmax, ymin, ymax, ..., ..., kmin, kmax]. If
-            :attr:`interleaved` is True, the coordinates must be in the form
-            [xmin, ymin, ..., kmin, xmax, ymax, ..., kmax]. This also applies
-            to velocities when using a TPR-Tree.
-
-        A basic example
-        ::
-
-            >>> from rtree import index
-            >>> p = index.Property()
-
-            >>> idx = index.Index(properties=p)
-            >>> idx  # doctest: +NORMALIZE_WHITESPACE
-            rtree.index.Index(bounds=[1.7976931348623157e+308,
-                                    1.7976931348623157e+308,
-                                    -1.7976931348623157e+308,
-                                    -1.7976931348623157e+308],
-                                    size=0)
-
-        Insert an item into the index::
-
-            >>> idx.insert(4321,
-            ...            (34.3776829412, 26.7375853734, 49.3776829412,
-            ...             41.7375853734),
-            ...            obj=42)
-
-        Query::
-
-            >>> hits = idx.intersection((0, 0, 60, 60), objects=True)
-            >>> for i in hits:
-            ...     if i.id == 4321:
-            ...         i.object
-            ...         i.bbox
-            ... # doctest: +ELLIPSIS
-            42
-            [34.37768294..., 26.73758537..., 49.37768294..., 41.73758537...]
-
-
-        Using custom serializers::
-
-            >>> class JSONIndex(index.Index):
-            ...     def dumps(self, obj):
-            ...         # This import is nested so that the doctest doesn't
-            ...         # require simplejson.
-            ...         import simplejson
-            ...         return simplejson.dumps(obj).encode('ascii')
-            ...
-            ...     def loads(self, string):
-            ...         import simplejson
-            ...         return simplejson.loads(string.decode('ascii'))
-
-            >>> stored_obj = {"nums": [23, 45], "letters": "abcd"}
-            >>> json_idx = JSONIndex()
-            >>> try:
-            ...     json_idx.insert(1, (0, 1, 0, 1), stored_obj)
-            ...     list(json_idx.nearest((0, 0), 1,
-            ...                           objects="raw")) == [stored_obj]
-            ... except ImportError:
-            ...     True
-            True
-
-        """
         self.properties = kwargs.get("properties", Property())
 
         if self.properties.type == RT_TPRTree and not hasattr(
@@ -411,50 +297,8 @@ class Index:
     result_offset = property(get_result_offset, set_result_offset)
 
     def insert(self, id: int, coordinates: Any, obj: object = None) -> None:
-        """Inserts an item into the index with the given coordinates.
 
-        :param id: A long integer that is the identifier for this index entry.  IDs
-            need not be unique to be inserted into the index, and it is up
-            to the user to ensure they are unique if this is a requirement.
-
-        :param coordinates: This may be an object that satisfies the numpy array
-            protocol, providing the index's dimension * 2 coordinate
-            pairs representing the `mink` and `maxk` coordinates in
-            each dimension defining the bounds of the query window.
-            For a TPR-Tree, this must be a 3-element sequence including
-            not only the positional coordinate pairs but also the
-            velocity pairs `minvk` and `maxvk` and a time value as a float.
-
-        :param obj: a pickleable object.  If not None, this object will be
-            stored in the index with the :attr:`id`.
-
-        The following example inserts an entry into the index with id `4321`,
-        and the object it stores with that id is the number `42`.  The
-        coordinate ordering in this instance is the default (interleaved=True)
-        ordering::
-
-            >>> from rtree import index
-            >>> idx = index.Index()
-            >>> idx.insert(4321,
-            ...            (34.3776829412, 26.7375853734, 49.3776829412,
-            ...             41.7375853734),
-            ...            obj=42)
-
-        This example is inserting the same object for a TPR-Tree, additionally
-        including a set of velocities at time `3`::
-
-            >>> p = index.Property(type=index.RT_TPRTree)  # doctest: +SKIP
-            >>> idx = index.Index(properties=p)  # doctest: +SKIP
-            >>> idx.insert(4321,
-            ...            ((34.3776829412, 26.7375853734, 49.3776829412,
-            ...             41.7375853734),
-            ...             (0.5, 2, 1.5, 2.5),
-            ...            3.0),
-            ...            obj=42)  # doctest: +SKIP
-
-        """
         if self.properties.type == RT_TPRTree:
-            # https://github.com/python/mypy/issues/6799
             return self._insertTP(id, *coordinates, obj=obj)  # type: ignore[misc]
 
         p_mins, p_maxs = self.get_coordinate_pointers(coordinates)
@@ -500,47 +344,7 @@ class Index:
         )
 
     def count(self, coordinates: Any) -> int:
-        """Return number of objects that intersect the given coordinates.
 
-        :param coordinates: This may be an object that satisfies the numpy array
-            protocol, providing the index's dimension * 2 coordinate
-            pairs representing the `mink` and `maxk` coordinates in
-            each dimension defining the bounds of the query window.
-            For a TPR-Tree, this must be a 3-element sequence including
-            not only the positional coordinate pairs but also the
-            velocity pairs `minvk` and `maxvk` and a time pair for the
-            time range as a float.
-
-        The following example queries the index for any objects any objects
-        that were stored in the index intersect the bounds given in the
-        coordinates::
-
-            >>> from rtree import index
-            >>> idx = index.Index()
-            >>> idx.insert(4321,
-            ...            (34.3776829412, 26.7375853734, 49.3776829412,
-            ...             41.7375853734),
-            ...            obj=42)
-
-            >>> print(idx.count((0, 0, 60, 60)))
-            1
-
-        This example is similar for a TPR-Tree::
-
-            >>> p = index.Property(type=index.RT_TPRTree)  # doctest: +SKIP
-            >>> idx = index.Index(properties=p)  # doctest: +SKIP
-            >>> idx.insert(4321,
-            ...            ((34.3776829412, 26.7375853734, 49.3776829412,
-            ...             41.7375853734),
-            ...             (0.5, 2, 1.5, 2.5),
-            ...             3.0),
-            ...            obj=42)  # doctest: +SKIP
-
-            >>> print(idx.count(((0, 0, 60, 60), (0, 0, 0, 0), (3, 5))))
-            ... # doctest: +SKIP
-            1
-
-        """
         if self.properties.type == RT_TPRTree:
             return self._countTP(*coordinates)
         p_mins, p_maxs = self.get_coordinate_pointers(coordinates)
@@ -597,45 +401,7 @@ class Index:
     def contains(
         self, coordinates: Any, objects: Union[bool, Literal["raw"]] = False
     ) -> Optional[Iterator[Union[Item, int, object]]]:
-        """Return ids or objects in the index that contains within the given
-        coordinates.
 
-        :param coordinates: This may be an object that satisfies the numpy array
-            protocol, providing the index's dimension * 2 coordinate
-            pairs representing the `mink` and `maxk` coordinates in
-            each dimension defining the bounds of the query window.
-
-        :param objects: If True, the intersection method will return index objects that
-            were pickled when they were stored with each index entry, as well
-            as the id and bounds of the index entries. If 'raw', the objects
-            will be returned without the :class:`rtree.index.Item` wrapper.
-
-        The following example queries the index for any objects any objects
-        that were stored in the index intersect the bounds given in the
-        coordinates::
-
-            >>> from rtree import index
-            >>> idx = index.Index()
-            >>> idx.insert(4321,
-            ...            (34.3776829412, 26.7375853734, 49.3776829412,
-            ...             41.7375853734),
-            ...            obj=42)
-
-            >>> hits = list(idx.contains((0, 0, 60, 60), objects=True))
-            ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS +SKIP
-            >>> [(item.object, item.bbox) for item in hits if item.id == 4321]
-            ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS +SKIP
-            [(42, [34.37768294..., 26.73758537..., 49.37768294...,
-                   41.73758537...])]
-
-        If the :class:`rtree.index.Item` wrapper is not used, it is faster to
-        request the 'raw' objects::
-
-            >>> list(idx.contains((0, 0, 60, 60), objects="raw"))
-            ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS +SKIP
-            [42]
-
-        """
 
         if objects:
             return self._contains_obj(coordinates, objects)
@@ -1004,8 +770,7 @@ class Index:
             If 'raw', it will return the object as entered into the database
             without the :class:`rtree.index.Item` wrapper.
 
-        .. warning::
-            This is currently not implemented for the TPR-Tree.
+
 
         Example of finding the three items nearest to this one::
 

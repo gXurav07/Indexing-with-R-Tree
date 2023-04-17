@@ -8,6 +8,7 @@ from tkinter import filedialog
 import os
 
 from Model.rtree import index
+from Model.rtree import main
 from image_viewer import ImageViewer
 
 import torch
@@ -22,13 +23,14 @@ IMAGES_DIR = 'Data/Images/'
 #load the data
 points = np.load('Data/features.npy')
 img_files = pd.read_csv('Data/mapping.csv')
-insert_count = 100
+insert_count = 2000
 dim = points.shape[2]   ##
 print(f'Dimension: {dim}')
 
 p = index.Property()
 p.dimension = dim
 
+nd = main.Node()
 
 # Create the rtree index for dim-dimensional data
 idx = index.Index(properties=p)
